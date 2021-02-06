@@ -689,27 +689,3 @@ class NavigationEnvAcc(NavigationEnvDefault):
         obs = np.copy(self.array_observation())
         self.obs_queue.append(obs)
         return obs, reward, done, info
-
-if __name__ == '__main__':
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    from stable_baselines import SAC
-    from stable_baselines import PPO2
-    from stable_baselines.common.vec_env import SubprocVecEnv
-
-    env = NavigationEnvAcc(max_speed=1)
-    model = SAC(env=env, policy='MlpPolicy', verbose=1, )
-    model.learn(100000)
-    del env
-    env = NavigationEnvAcc(max_speed=1)
-    scores =[]
-    while True:
-        obs = env.reset()
-        done = False
-        while not done:
-            action, _ = model.predict(obs)
-            env.render()
-            obs, reward, done, info = env.step(action)
-            if done:
-                scores.append(info["is_success"])
-        print(np.mean(scores))
