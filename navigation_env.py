@@ -616,6 +616,8 @@ class NavigationEnvAcc(NavigationEnvDefault):
         "obstacle_speed": gym.spaces.Box(low=-1, high=1, shape=(len(OBSTACLE_POSITIONS), )),
         "obstacle_position": gym.spaces.Box(low=0, high=1, shape=(2 * len(OBSTACLE_POSITIONS), ))
     }
+    observation_meta_data_keys = ["position", "goal_position", "velocity",
+                                  "lidar", "energy", "obstacle_speed", "obstacle_position"]
 
     def __init__(self, max_obs_range=3,  max_speed=5, initial_speed=2, **kwargs):
         super().__init__(max_obs_range, max_speed, initial_speed, )
