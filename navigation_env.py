@@ -312,7 +312,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
         obs = []
 
-        for k in dict_obs.keys():
+        for k in self.observation_meta_data_keys:
             obs.append(np.asarray(dict_obs[k], dtype=np.float32).flatten())
 
         return np.concatenate(obs)
@@ -645,7 +645,7 @@ class NavigationEnvAcc(NavigationEnvDefault):
 
         self.action = action
         # mass == 1 impulse == action
-        self.drone.ApplyForce((action[0], action[1]), self.drone.position, wake=True)
+        self.drone.ApplyForce((action[0] * 5, action[1] * 5), self.drone.position, wake=True)
         self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
         v = self.drone.linearVelocity
         v = np.clip(v, a_min=[-3, -3], a_max=[3, 3])
