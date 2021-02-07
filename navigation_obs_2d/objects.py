@@ -31,12 +31,14 @@ class MovingRange(object):
         return cls(start=start, end=end, axis=axis)
 
 class Obstacles(object):
-    def __init__(self, world):
+    def __init__(self, world, max_speed):
         self.world = world
         self.speed_table = np.zeros(len(OBSTACLE_POSITIONS))
         self.obstacles = []
+        self.max_speed = max_speed
+        self.min_speed = 0.5
 
-    def _build_obstacles(self):
+    def build_obstacles(self):
         for i in range(len(OBSTACLE_POSITIONS)):
             pos = np.random.uniform(low=OBSTACLE_POSITIONS[i][0], high=OBSTACLE_POSITIONS[i][1])
             if self.max_speed < self.min_speed:
@@ -66,10 +68,26 @@ class Obstacles(object):
             setattr(obstacle, "moving_range", range_)
             self.obstacles.append(obstacle)
 
-    def positions(self):
+    def clean_obstacles(self):
+        while self.obstacles:
+            self.world.DestroyBody(self.obstacles.pop(0))
 
+    def step(self):
+        for i, o in enumerate(self.obstacles):
+            moving_range = o.moving_range.out_of_range(o)
+            if moving_range != 0:
+                speed = np.random.uniform(low=self.min_speed, high=self.max_speed)
+                next_velocity = (speed * moving_range) * o.moving_range.move_direction
+                o.linearVelocity.Set(next_velocity[0], next_velocity[1])
+                self.speed_table[i] = moving_range  * speed / 5
+
+    def reset(self):
+        self.speed_table = np.zeros(len(OBSTACLE_POSITIONS))
+
+    def positions(self, drone_position):
+        position = normalize_position(drone_position, W, H)
+        obstacle_position = [position - normalize_position(o.position, W, H) for o in self.obstacles]
+        return obstacle_position
 
     def speeds(self):
-
-
-class Drones(object):
+        return np.copy(self.speed_table)
