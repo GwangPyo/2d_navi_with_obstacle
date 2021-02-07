@@ -1,4 +1,4 @@
-import sys, math
+import math
 import numpy as np
 
 import Box2D
@@ -8,122 +8,8 @@ import gym
 from gym import spaces
 from gym.utils import seeding, EzPickle
 from collections import deque
-import copy
-
-# Routing Optimization Avoiding Obstacle.
-
-# how many action do in 1 second
-FPS = 5
-# affects how fast-paced the game is, forces should be adjusted as well
-SCALE = 30.0
-# Drone's shape
-DRONE_POLY = [
-    (-11, +14), (-14, 0), (-14, -7),
-    (+14, -7), (14, 0), (+11, +14)]
-# obstacle initial velocity
-OBSTACLE_INIT_VEL = [(1, 0), (-1, 0), (0, 1), (0, -1),
-                (1/np.sqrt(2), 1/np.sqrt(2)), (1/np.sqrt(2), -1/np.sqrt(2)), (-1/np.sqrt(2), 1/np.sqrt(2)),
-                     (-1/np.sqrt(2), -1/np.sqrt(2))]
-# map size
-VIEWPORT_W = 600
-VIEWPORT_H = 600
-
-W = VIEWPORT_W / SCALE
-H = VIEWPORT_H / SCALE
-
-# Shape of Walls
-WALL_POLY = [
-    (-50, +20), (50, 20),
-    (-50, -20), (50, -20)
-]
-
-
-HORIZON_LONG = [(W, -0.3), (W, 0.3),
-                  (-W, -0.3), (-W, 0.3)  ]
-VERTICAL_LONG = [ (-0.3, H), (0.3, H),
-                  (-0.3, -H), (0.3, -H)]
-
-HORIZON_SHORT = [(W/3, -0.5), (W/3, 0.5),
-                  (-W/3, -0.5), (-W/3, 0.5)  ]
-                    # up         # right     # down    # left , left_one_third, right_one_third
-WALL_INFOS = {"pos": [(int(W /2), int(H)), (int(W), int(H/2)), (int(W / 2), 0), (0, int(H/2))],
-              "vertices": [HORIZON_LONG, VERTICAL_LONG, HORIZON_LONG, VERTICAL_LONG]
-}
-
-
-def normalize_position(x):
-    y = np.copy(x)
-    y[0] = x[0]/W
-    y[1] = x[1]/H
-    return y
-
-def denormalize_position(x):
-    y = np.copy(x)
-    y[0] = x[0] * W
-    y[1] = x[1] * H
-    return y
-
-y_positions = [0.2, 0.35, 0.5, 0.7]
-y_positions = [y__ * H for y__ in copy.copy(y_positions)]
-# Initial Position of Drone and Goal which of each chosen randomly among vertical ends.
-DRONE_INIT_POS =[(int(np.random.randint(1, 14)), np.random.choice(y_positions))]
-GOAL_POS = [ (14, 11), (11, 11)]
-VERTICAL = 1
-HORIZONTAL = 0
-
-
-OBSTACLE_POSITIONS = [ [[0.08, 0.25], [0.65, 0.25], HORIZONTAL],
-                      [[0.08, 0.4], [0.65,  0.4], HORIZONTAL],
-                      [[0.08, 0.55], [0.65,  0.55], HORIZONTAL],
-                      [[0.92, 0.25], [0.85, 0.25], HORIZONTAL],
-                      [[0.92, 0.4], [0.85, 0.4], HORIZONTAL],
-                      [[0.2,  0.9],  [0.2, 0.75], VERTICAL],
-                      [[0.4,  0.9],  [0.4, 0.75], VERTICAL],
-                      [[0.6,  0.9],  [0.6 ,0.75], VERTICAL],
-                      [[0.8 , 0.9], [0.8,  0.75], VERTICAL]
-                ]
-
-OBSTACLE_POSITIONS = [[denormalize_position(x[0]), denormalize_position(x[1]), x[2]] for x in OBSTACLE_POSITIONS]
-for x in OBSTACLE_POSITIONS:
-    if x[2] ==HORIZONTAL:
-        x[0] += 0.3
-        x[0] -= 0.3
-
-def rotation_4(z):
-    x = z[0]
-    y = z[1]
-    rot = [[x, y], [-x, y], [-x, -y], [x, -y]]
-    return rot
-
-class MovingRange(object):
-    def __init__(self, start, end, axis):
-        assert start <= end
-        self.start = start
-        self.end = end
-        self.axis = axis
-        move_direction = np.zeros(2)
-        move_direction[self.axis] = 1
-        self.move_direction = move_direction
-
-    def out_of_range(self, o):
-        if o.position[self.axis] >= self.end:
-            return -1
-        elif o.position[self.axis] <= self.start:
-            return 1
-        else:
-            return 0
-
-    @classmethod
-    def from_metadata(cls, meta):
-        axis = meta[2]
-        if meta[0][axis] > meta[1][axis]:
-            start = meta[1][axis]
-            end = meta[0][axis]
-        else:
-            start = meta[0][axis]
-            end = meta[1][axis]
-        return cls(start=start, end=end, axis=axis)
-
+from navigation_obs_2d.config import *
+from navigation_obs_2d.util import *
 
 def to_rect(obstacle_pos):
     axis = obstacle_pos[2]
@@ -137,7 +23,6 @@ def to_rect(obstacle_pos):
         x_range = 0.6
         position = [(obstacle_pos[0][0] + obstacle_pos[1][0])/2, (obstacle_pos[0][1] + obstacle_pos[1][1])/2]
         poly = rotation_4([x_range/2, y_range/2])
-
     return position, poly
 
 
@@ -236,6 +121,10 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         self.obs_queue = deque(maxlen=10)
 
     @property
+    def drone_start_pos(self):
+        return
+
+    @property
     def observation_space(self):
         size = 0
         for k in self.observation_meta_data:
@@ -261,11 +150,11 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         return np.asarray([r, theta])
 
     def dict_observation(self):
-        position = normalize_position(self.drone.position)
-        goal_position = normalize_position(self.goal.position)
+        position = normalize_position(self.drone.position, W, H)
+        goal_position = normalize_position(self.goal.position, W, H)
         lidar = [l.fraction for l in self.lidar]
         obstacle_speed = np.copy(self.speed_table)
-        obstacle_position = [position - normalize_position(o.position) for o in self.obstacles]
+        obstacle_position = [position - normalize_position(o.position, W, H) for o in self.obstacles]
         dict_obs = {
             "position":position,
             "goal_position": goal_position,
@@ -316,16 +205,9 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         wall_ver = WALL_INFOS["vertices"]
 
         for p, v in zip(wall_pos, wall_ver):
-            wall = self.world.CreateStaticBody(
-                position=p,
-                angle=0.0,
-                fixtures=fixtureDef(
-                    shape=polygonShape(vertices=v),
-                    density=100.0,
-                    friction=0.0,
-                    categoryBits=0x001,
-                    restitution=1.0,)  # 0.99 bouncy
-            )
+            wall = self.world.CreateStaticBody(position=p, angle=0.0,
+                                                fixtures=fixtureDef(shape=polygonShape(vertices=v), density=100.0,
+                                                friction=0.0, categoryBits=0x001, restitution=1.0,))
             wall.color1 = (1.0, 1.0, 1.0)
             wall.color2 = (1.0, 1.0, 1.0)
             self.walls.append(wall)
@@ -344,18 +226,10 @@ class NavigationEnvDefault(gym.Env, EzPickle):
                 vel = [vel, 0]
             else:
                 vel = [0, vel]
-            obstacle = self.world.CreateDynamicBody(
-                position=(pos[0], pos[1]),
-                angle=0.0,
-                fixtures=fixtureDef(
-                    shape=circleShape(radius=0.3, pos=(0, 0)),
-                    density=5.0,
-                    friction=0,
-                    categoryBits=0x001,
-                    maskBits=0x0010,
-                    restitution=1.0,
-                )  # 0.99 bouncy
-            )
+            obstacle = self.world.CreateDynamicBody(position=(pos[0], pos[1]), angle=0.0,
+                                                    fixtures=fixtureDef(shape=circleShape(radius=0.3, pos=(0, 0)),
+                                                                        density=5.0, friction=0, categoryBits=0x001,
+                                                                        maskBits=0x0010, restitution=1.0,))
             obstacle.color1 = (0.7, 0.2, 0.2)
             obstacle.color2 = (0.7, 0.2, 0.2)
 
@@ -388,10 +262,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
     def _get_observation(self, position):
         delta_angle = 2* np.pi/self.num_beams
-        ranges = [self.world.raytrace(position,
-                                      i * delta_angle,
-                                      self.max_obs_range) for i in range(self.num_beams)]
-
+        ranges = [self.world.raytrace(position, i * delta_angle, self.max_obs_range) for i in range(self.num_beams)]
         ranges = np.array(ranges)
         return ranges
 
@@ -427,12 +298,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         self.moon = self.world.CreateStaticBody(shapes=edgeShape(vertices=[(0, 0), (W, 0)]))
         p1 = (1, 1)
         p2 = (W - 1, 1)
-        self.moon.CreateEdgeFixture(
-            vertices=[p1, p2],
-            density=100,
-            friction=0,
-            restitution=1.0,
-        )
+        self.moon.CreateEdgeFixture(vertices=[p1, p2], density=100, friction=0, restitution=1.0)
         self._build_wall()
         self.moon.color1 = (0.0, 0.0, 0.0)
         self.moon.color2 = (0.0, 0.0, 0.0)
@@ -443,18 +309,10 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         # create controller object
         while True:
             drone_pos = (int(np.random.randint(1, 10)), int(np.random.randint(1, 5)))
-            self.drone = self.world.CreateDynamicBody(
-                position=drone_pos,
-
-                angle=0.0,
-                fixtures=fixtureDef(
-                    shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in DRONE_POLY]),
-                    density=5.0,
-                    friction=0.1,
-                    categoryBits=0x0010,
-                    maskBits=0x003,  # collide all but obs range object
-                    restitution=0.0)  # 0.99 bouncy
-            )
+            self.drone = self.world.CreateDynamicBody(position=drone_pos, angle=0.0,
+                                                      fixtures=fixtureDef(shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in DRONE_POLY]),
+                                                                          density=5.0, friction=0.1, categoryBits=0x0010,
+                                                                          maskBits=0x003, restitution=0.0))
             self.drone.color1 = (0.5, 0.4, 0.9)
             self.drone.color2 = (0.3, 0.3, 0.5)
             self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
@@ -466,10 +324,8 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         # create goal
         np.random.seed(np.random.randint(low=0, high=100000))
         goal_pos = GOAL_POS[np.random.randint(len(GOAL_POS))]
-        self.goal = self.world.CreateStaticBody(
-            position=goal_pos,
-            angle=0.0,
-            fixtures=fixtureDef(
+        self.goal = self.world.CreateStaticBody(position=goal_pos, angle=0.0,
+                fixtures=fixtureDef(
                 shape=polygonShape(vertices=[(x / SCALE, y / SCALE) for x, y in DRONE_POLY]),
                 density=5.0,
                 friction=0.1,
@@ -594,11 +450,11 @@ class NavigationEnvAcc(NavigationEnvDefault):
         super().__init__(max_obs_range, max_speed, initial_speed, )
 
     def dict_observation(self):
-        position = normalize_position(self.drone.position)
-        goal_position = normalize_position(self.goal.position)
+        position = normalize_position(self.drone.position, W, H)
+        goal_position = normalize_position(self.goal.position, W, H)
         lidar = [l.fraction for l in self.lidar]
         obstacle_speed = np.copy(self.speed_table)
-        obstacle_position = [position - normalize_position(o.position) for o in self.obstacles]
+        obstacle_position = [position - normalize_position(o.position, W, H) for o in self.obstacles]
         velocity = self.drone.linearVelocity
         dict_obs = {
             "position":position,
