@@ -10,49 +10,23 @@ from gym.utils import seeding, EzPickle
 from collections import deque
 import copy
 
-
-class RewardWrapper(object):
-    def __init__(self):
-        pass
-
-    def __call__(self, *args, **kwargs) -> float:
-        pass
-
-
-class EasyReward(RewardWrapper):
-    def __call__(self, pos, before_pos, goal_pos, reward):
-        before_dist = np.linalg.norm(goal_pos - before_pos)
-        cur_dist = np.linalg.norm(goal_pos - pos)
-        return cur_dist - before_dist
-
-
-class RerwardFunction(RewardWrapper):
-    def __call__(self, reward):
-        return reward
-
-
-
-
-
-
-
-
 # Routing Optimization Avoiding Obstacle.
 
+# how many action do in 1 second
 FPS = 5
-SCALE = 30.0  # affects how fast-paced the game is, forces should be adjusted as well
-
+# affects how fast-paced the game is, forces should be adjusted as well
+SCALE = 30.0
 # Drone's shape
 DRONE_POLY = [
     (-11, +14), (-14, 0), (-14, -7),
     (+14, -7), (14, 0), (+11, +14)]
-
+# obstacle initial velocity
 OBSTACLE_INIT_VEL = [(1, 0), (-1, 0), (0, 1), (0, -1),
                 (1/np.sqrt(2), 1/np.sqrt(2)), (1/np.sqrt(2), -1/np.sqrt(2)), (-1/np.sqrt(2), 1/np.sqrt(2)),
                      (-1/np.sqrt(2), -1/np.sqrt(2))]
-
+# map size
 VIEWPORT_W = 600
-VIEWPORT_H = 400
+VIEWPORT_H = 600
 
 W = VIEWPORT_W / SCALE
 H = VIEWPORT_H / SCALE
@@ -83,13 +57,11 @@ def normalize_position(x):
     y[1] = x[1]/H
     return y
 
-
 def denormalize_position(x):
     y = np.copy(x)
     y[0] = x[0] * W
     y[1] = x[1] * H
     return y
-
 
 y_positions = [0.2, 0.35, 0.5, 0.7]
 y_positions = [y__ * H for y__ in copy.copy(y_positions)]
@@ -98,6 +70,7 @@ DRONE_INIT_POS =[(int(np.random.randint(1, 14)), np.random.choice(y_positions))]
 GOAL_POS = [ (14, 11), (11, 11)]
 VERTICAL = 1
 HORIZONTAL = 0
+
 
 OBSTACLE_POSITIONS = [ [[0.08, 0.25], [0.65, 0.25], HORIZONTAL],
                       [[0.08, 0.4], [0.65,  0.4], HORIZONTAL],
@@ -109,19 +82,18 @@ OBSTACLE_POSITIONS = [ [[0.08, 0.25], [0.65, 0.25], HORIZONTAL],
                       [[0.6,  0.9],  [0.6 ,0.75], VERTICAL],
                       [[0.8 , 0.9], [0.8,  0.75], VERTICAL]
                 ]
+
 OBSTACLE_POSITIONS = [[denormalize_position(x[0]), denormalize_position(x[1]), x[2]] for x in OBSTACLE_POSITIONS]
 for x in OBSTACLE_POSITIONS:
     if x[2] ==HORIZONTAL:
         x[0] += 0.3
         x[0] -= 0.3
 
-
 def rotation_4(z):
     x = z[0]
     y = z[1]
     rot = [[x, y], [-x, y], [-x, -y], [x, -y]]
     return rot
-
 
 class MovingRange(object):
     def __init__(self, start, end, axis):
@@ -154,7 +126,6 @@ class MovingRange(object):
 
 
 def to_rect(obstacle_pos):
-
     axis = obstacle_pos[2]
     if axis == HORIZONTAL:
         y_range = 0.6
@@ -562,7 +533,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
                 'energy':
                 self.energy,
                 'episode': {
-                    "r":reward,
+                    "r": reward,
                     'l': (1 - self.energy) * 1000
                 },
             }
@@ -691,3 +662,9 @@ class NavigationEnvAcc(NavigationEnvDefault):
         obs = np.copy(self.array_observation())
         self.obs_queue.append(obs)
         return obs, reward, done, info
+
+
+if __name__ == "__main__":
+    env = NavigationEnvAcc()
+    while True:
+        env.render()
