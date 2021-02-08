@@ -53,12 +53,12 @@ HORIZONTAL = 0
 OBSTACLE_POSITIONS = [[[0.08, 0.25], [0.65, 0.25], HORIZONTAL],
                       [[0.08, 0.4], [0.65,  0.4], HORIZONTAL],
                       [[0.08, 0.55], [0.65,  0.55], HORIZONTAL],
-                      [[0.92, 0.25], [0.85, 0.25], HORIZONTAL],
-                      [[0.92, 0.4], [0.85, 0.4], HORIZONTAL],
-                      [[0.2,  0.9],  [0.2, 0.75], VERTICAL],
-                      [[0.4,  0.9],  [0.4, 0.75], VERTICAL],
-                      [[0.6,  0.9],  [0.6 ,0.75], VERTICAL],
-                      [[0.8 , 0.9], [0.8,  0.75], VERTICAL]
+                      [[0.85, 0.25], [0.92, 0.25], HORIZONTAL],
+                      [[0.85, 0.4], [0.92, 0.4], HORIZONTAL],
+                      [[0.2,  0.75],  [0.2, 0.9], VERTICAL],
+                      [[0.4,  0.75],  [0.4, 0.9], VERTICAL],
+                      [[0.6,  0.75],  [0.6 ,0.9], VERTICAL],
+                      [[0.8 , 0.75], [0.8,  0.9], VERTICAL]
                 ]
 
 OBSTACLE_POSITIONS = [[denormalize_position(x[0], W, H), denormalize_position(x[1], W, H), x[2]] for x in OBSTACLE_POSITIONS]

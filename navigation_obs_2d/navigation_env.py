@@ -76,7 +76,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
     # rather than create ordered dict whenever steps proceed
     observation_meta_data_keys = ['position', 'goal_position', 'lidar', 'energy', 'obstacle_speed', 'obstacle_position']
 
-    def __init__(self, max_obs_range=3,  max_speed=5, initial_speed=2, **kwargs):
+    def __init__(self, max_obs_range=3,  max_speed=2, initial_speed=2, **kwargs):
         super(EzPickle, self).__init__()
         self._ezpickle_args = ( )
         self._ezpickle_kwargs = {}
@@ -152,7 +152,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         position = normalize_position(self.drone.position, W, H)
         goal_position = normalize_position(self.goal.position, W, H)
         lidar = [l.fraction for l in self.lidar]
-        obstacle_speed = self.obstacles.speeds()
+        obstacle_speed = self.obstacles.speeds
         obstacle_position = self.obstacles.positions(self.drone.position)
         dict_obs = {
             'position':position,
@@ -293,6 +293,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
 
         self._build_wall()
         # create obstacles
+        print("?????????")
         self.obstacles.build_obstacles()
         drone_pos = self._build_drone()
         # create goal
@@ -300,7 +301,7 @@ class NavigationEnvDefault(gym.Env, EzPickle):
         self._build_goal()
         self._build_obs_range()
 
-        self.drawlist = [self.obs_range_plt, self.drone, self.goal] + self.walls + self.obstacles.obstacles
+        self.drawlist = [self.obs_range_plt, self.drone, self.goal] + self.walls + self.obstacles.dynamic_bodies
         self._observe_lidar(drone_pos)
         self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
         return np.copy(self.array_observation())
@@ -430,5 +431,8 @@ class NavigationEnvAcc(NavigationEnvDefault):
 
 if __name__ == '__main__':
     env = NavigationEnvAcc()
-    while True:
+    env.reset()
+    done = False
+    while not done:
+        _, _, done,_ = env.step(np.zeros(2))
         env.render()
